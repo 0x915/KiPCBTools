@@ -264,13 +264,25 @@ class Vec2D:
         return b.angle - a.angle
 
     @staticmethod
-    def isParallel(a: "Vec2D", b: "Vec2D", rad_tolerance=G_ANGLE_RAD_TOLERANCE) -> int:
-        dRad = abs(Vec2D.GetIncludedAngle(a, b).value)
-        if (dRad < rad_tolerance) or (abs(Rad.DEF_360DEG - dRad) < rad_tolerance):
+    def isParallel(a: "Vec2D", b: "Vec2D", tolerance=0.0001, debuger=None) -> int:
+        """判断 向量(a) 与 向量(b)平行：正值(+)同向平行，负值(-)反向平行，零值不平行"""
+
+        if a.IsZero() or b.IsZero():
             return 1
-        if abs(Rad.DEF_180DEG - dRad) < rad_tolerance:
+
+        aU = a.SetNorm(1)
+        bU = b.SetNorm(1)
+        
+        c = aU - bU
+        if c.norm <= tolerance:
+            return 1
+
+        c = aU + bU
+        if c.norm <= tolerance:
             return -1
+            
         return 0
+
 
     @staticmethod
     def GetParallelDistance(u: "Vec2D", v: "Vec2D"):
