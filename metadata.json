@@ -32,6 +32,17 @@
                 "macos",
                 "windows"
             ]
+        },
+        {
+            "version": "0.8.1",
+            "status": "development",
+            "kicad_version": "8.0",
+            "download_url": "https://github.com/0x915/KiPCBTools/releases/download/beta/KiPCBTools-0x915-v0.8.1.zip",
+            "platforms": [
+                "linux",
+                "macos",
+                "windows"
+            ]
         }
     ]
 }
