@@ -1,0 +1,1 @@
+Get-Content .\plugin.log -Wait -Encoding UTF8
