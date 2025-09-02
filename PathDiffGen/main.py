@@ -1,8 +1,10 @@
+﻿import os
+
 import math
 from typing import Iterator, List, Tuple
 
 import kipy
-from kipy import KiCad  # type: ignore
+from kipy import kicad as kipy_kicad
 from kipy.board_types import BoardSegment, Track
 from kipy.geometry import Vector2
 
@@ -11,6 +13,8 @@ from MathLib.Vector import Vec2D
 # from TrackExport import KiSegmentPoint2D, TrackPolyline2D
 # from kiLib import PY_PCB_TRACK
 from spdlogger import logger
+
+os.system("chcp 65001")
 
 
 class KiLinePoint2D:
@@ -56,7 +60,7 @@ class KiLinePoint2D:
     def GetBindList(self) -> List["KiLinePoint2D.BindInfo"]:
         return self._bindList
 
-    def Update(self, board: kipy.kicad.Board):
+    def Update(self, board: kipy_kicad.Board):
         if len(self._bindList) == 0:
             logger.error(f"端点({self})未绑定线段.")
             return False
@@ -66,13 +70,13 @@ class KiLinePoint2D:
             # 终点
             if btype == self.BTYPE_END_POINT:
                 logger.info(f"更新线段({id(kiobj):X})终点坐标({self.x:+}, {self.y:+})")
-                kiobj.end.from_xy(self.x, self.y)
+                kiobj.end.from_xy(int(self.x), int(self.y))
                 board.update_items(kiobj)
                 continue
             # 起点
             if btype == self.BTYPE_START_POINT:
                 logger.info(f"更新线段(0x{id(kiobj):X})起点坐标({self.x:+}, {self.y:+})")
-                kiobj.start.from_xy(self.x, self.y)
+                kiobj.start.from_xy(int(self.x), int(self.y))
                 board.update_items(kiobj)
                 continue
             logger.error(f"错误：线段(0x{id(kiobj):X})不存在的端点类型({btype}),不会执行任何操作.")
@@ -82,8 +86,14 @@ class KiLinePoint2D:
     def XYEQ(self, x: int | float, y: int | float):
         return self.x == x and self.y == y
 
-    def __eq__(self, other):
-        return self.x == other.x and self.y == other.y
+    def XYRadius(self, x: int | float, y: int | float, radius: int | float):
+        return math.pow(self.x - x, 2) + math.pow(self.y - y, 2) <= math.pow(radius, 2)
+
+    def GetRadius(self, x: int | float, y: int | float):
+        return math.sqrt(math.pow(self.x - x, 2) + math.pow(self.y - y, 2))
+
+    def __eq__(self, object: "KiLinePoint2D"):  # type: ignore
+        return self.x == object.x and self.y == object.y
 
     def __str__(self) -> str:
         bind_str: str = ""
@@ -92,16 +102,21 @@ class KiLinePoint2D:
         return f"<{self.__class__.__name__} {id(self):X} ({self.x},{self.y}) {{bind{bind_str} {len(self._bindList)}}}>"
 
 
-def ExportLinePoint(lineList: List[BoardSegment]) -> List[KiLinePoint2D]:
+def ExportLinePoint(lineList: List[BoardSegment], merge_radius: int | float = 1000) -> List[KiLinePoint2D]:
     logger.info("")
     logger.info(f"{ExportLinePoint.__name__}():")
     logger.info(f"提取(x{len(lineList)})输入线段列表中的端点:")
 
-    def AddPoint(x: int, y: int, bindInfo: KiLinePoint2D.BindInfo, ptList: List[KiLinePoint2D]):
+    def AddPoint(x: int, y: int, bindInfo: KiLinePoint2D.BindInfo, ptList: List[KiLinePoint2D], merge_radius: int | float):
         # 端点存在
         for pt in ptList:
             if pt.XYEQ(x, y):
                 pt.AppendBind(bindInfo)
+                logger.info(f"  绑定   {pt}")
+                return
+            if pt.XYRadius(x, y, merge_radius):
+                pt.AppendBind(bindInfo)
+                logger.warn(f"  近似点 <XY ({x},{y}) distance=({pt.GetRadius(x, y)}<={merge_radius})>")
                 logger.info(f"  绑定   {pt}")
                 return
             continue
@@ -121,6 +136,7 @@ def ExportLinePoint(lineList: List[BoardSegment]) -> List[KiLinePoint2D]:
             line.start.y,
             KiLinePoint2D.BindInfo(line, KiLinePoint2D.BTYPE_START_POINT),
             allPointList,
+            merge_radius,
         )
         # 线段终点
         AddPoint(
@@ -128,6 +144,7 @@ def ExportLinePoint(lineList: List[BoardSegment]) -> List[KiLinePoint2D]:
             line.end.y,
             KiLinePoint2D.BindInfo(line, KiLinePoint2D.BTYPE_END_POINT),
             allPointList,
+            merge_radius,
         )
 
     logger.info("端点捕获列表:")
@@ -311,8 +328,8 @@ class KiLinePolyline2D:
             e = self.GetPoint(self._p_line + 1)
             if e is None:
                 return False
-            e.x = start.x
-            e.y = start.y
+            e.x = end.x
+            e.y = end.y
         return True
 
     def pMoveStart(self):
@@ -350,6 +367,8 @@ class KiLinePolyline2D:
     def pSet(self, p: int):
         p_min = 0
         p_max = self.MaxLineIndex()
+        if p_max is None:
+            return False
         if p < p_min or p > p_max:
             return False
         # 确保[索引在安全范围内]
@@ -387,7 +406,11 @@ def ExportLinePolyline(inPtList: List[KiLinePoint2D]):
 
         while True:
             # 查找 折线尾部端点 的 下一个关联端点
-            ptNext = FindNextPoint(polyline.GetEndPoint(), ptList)
+            pl_end = polyline.GetEndPoint()
+            if pl_end is None:
+                raise ValueError("错误：折线中没有终点")
+
+            ptNext = FindNextPoint(pl_end, ptList)
             # 结束折线
             if ptNext is None:
                 break
@@ -408,22 +431,29 @@ def ExportLinePolyline(inPtList: List[KiLinePoint2D]):
     while True:
         # 循环保护
         loop_break -= 1
-        assert loop_break > 0, "循环保护(构建向量表时超出最大循环次数)"
+        if loop_break <= 0:
+            raise OverflowError("循环保护(构建向量表时超出最大循环次数)")
 
         # 解析完成
         if len(inPtList) == 0:
             break
 
         # 构建折线
+        loop_error = True
         for pt in inPtList:
             # 只从独立点开始
             if pt.BindCount() != 1:
                 continue
+            loop_error = False
             inPtList.remove(pt)
             pl = ExportPolyline2D(pt, inPtList)
             plList.append(pl)
             logger.info(f"  = 折线{len(plList)} {pl}")
             break
+
+        if loop_error:
+            logger.error("无法找到折线起点，可能输入封闭图形，起点与终点共享同一端点，仅支持开放折线.")
+            raise ValueError("失败：不存在可用的折线起点")
 
     return plList
 
@@ -439,6 +469,8 @@ def MakeDiffPl(plin: KiLinePolyline2D, clearance: int | float):
 
     while True:
         plin_cur_line = plin.GetLine()
+        if plin_cur_line is None:
+            raise ValueError("失败：内部错误，当前参考折线没有线段")
 
         # 创建[当前参考线段]的平行线
         plin_cur_vec = plin_cur_line.toVec2D()
@@ -454,9 +486,12 @@ def MakeDiffPl(plin: KiLinePolyline2D, clearance: int | float):
         # 修正[输出折线的终点]为[输出折线的末尾线段]与[当前参考线段平行线]的交点
         else:
             retpl_endline = retpl.GetEndLine()
+            if retpl_endline is None:
+                raise ValueError("失败：内部错误，输出折线没有末尾线段")
             retpl_endline_vec = retpl_endline.toVec2D()
             # 构造新的平行线 求与上一线段交点
-
+            logger.debug(f"    当前DIFF{plin_curdiff_vec}")
+            logger.debug(f"    上个DIFF{plin_curdiff_vec}")
             junction = Vec2D.GetLinearJunction(plin_curdiff_vec, retpl_endline_vec)
             if junction is None:
                 raise ValueError("失败：找不到交点")
@@ -488,7 +523,7 @@ def MakeDiffPl(plin: KiLinePolyline2D, clearance: int | float):
 #
 
 
-def main(client: KiCad):
+def main(client: kipy_kicad.KiCad):
     board = client.get_board()
 
     ShapeLineList: List[BoardSegment] = []
@@ -502,7 +537,6 @@ def main(client: KiCad):
             logger.debug(f"+ {i}")
         else:
             logger.warn(f"Skip {i}")
-
 
     if len(TrackList) == 0:
         logger.warn("未选择线路")
@@ -525,18 +559,18 @@ def main(client: KiCad):
     vec2.SetStart(track2.start.x, track2.start.y)
 
     dp_layer = track1.layer
-    dp_clearance = Vec2D.GetParallelClearance(vec1, vec2,10000000)
+    dp_distance = Vec2D.GetParallelClearance(vec1, vec2, 10000000)
 
     # 检查差分线1 要求是平行线
-    if dp_clearance is None:
+    if dp_distance is None:
         logger.fatal("输入线路不平行,要求输入平行差分对")
         logger.fatal(f"  {vec1} rA={vec1.angle()}")
         logger.fatal(f"  {vec2} rA={vec2.angle()}")
-        logger.fatal(f"  平行误差 {Vec2D.Cross(vec1,vec2)/1000000}")
+        logger.fatal(f"  平行误差 {Vec2D.Cross(vec1, vec2) / 1000000}")
         return
 
     # 检查差分线2 要求有平行间距
-    if dp_clearance == 0:
+    if dp_distance == 0:
         logger.fatal("输入线路间距为0,要求输入正常差分对")
         logger.fatal(f"  {vec1}")
         logger.fatal(f"  {vec2}")
@@ -551,19 +585,22 @@ def main(client: KiCad):
         return
 
     logger.info("")
-    logger.info(f"输入参考差分对:")
+    logger.info("输入参考差分对:")
     logger.info(f"  {vec1}")
     logger.info(f"  {vec2}")
     logger.info(f"  dp_layer  = {dp_layer} ")
     logger.info(f"  dp_width  = {dp_width} ")
-    logger.info(f"  clearance = {dp_clearance} ")
+    logger.info(f"  clearance = {dp_distance} ")
+
+    # 端点近似距离 在半径内视视为同一个端点
+    merge_radius = 1000
 
     # 导出所有连接点 并转化为(多条)折线
-    ptList = ExportLinePoint(ShapeLineList)
+    ptList = ExportLinePoint(ShapeLineList, merge_radius)
     plList = ExportLinePolyline(ptList)
 
     # 生成的差分对与线段的距离只有输入间距的一半
-    dp_center = int(dp_clearance / 2)
+    dp_center = int(dp_distance / 2)
 
     kiobjList = []
 
@@ -601,11 +638,23 @@ def main(client: KiCad):
     for kiobj in kiobjList:
         board.create_items(kiobj)
         logger.info(f"  + {kiobj}")
-    board.push_commit(commit,"MakeDiffTrack")
+    board.push_commit(commit, "MakeDiffTrack")
+
+    logger.warn("")
+    logger.warn(f"在端点合并距离{merge_radius / 1000000}mm下,解析并转换{len(plList)}个输入图形折线.")
+    logger.warn(f"差分线(宽度) W = {dp_width / 1000000:6f} mm")
+    logger.warn(f"差分线(间隙) C = {(dp_distance - dp_width) / 1000000:6f} mm")
+    logger.warn(f"差分对(中心距) = {(dp_distance) / 1000000:6f} mm")
+    logger.warn(f"差分对(整体宽度) = {(dp_width + dp_distance) / 1000000:6f} mm")
+    logger.warn(f"差分对(对外间隙) = {(6 * dp_width) / 1000000:6f} mm")
+    logger.warn(f"差分对(空间占用) = {(dp_width + dp_distance + 6 * dp_width) / 1000000:6f} mm")
 
 
-if __name__=='__main__':
-
-    kicad = KiCad()
-    print(f"Connected to KiCad {kicad.get_version()}")
-    main(kicad)
+if __name__ == "__main__":
+    try:
+        kicad = kipy_kicad.KiCad()
+        logger.info(f"Connected to KiCad {kicad.get_version()}")
+        main(kicad)
+    except Exception as e:
+        logger.fatal(f"{e}")
+        raise e

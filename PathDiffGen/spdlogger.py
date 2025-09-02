@@ -1,6 +1,6 @@
 from enum import IntEnum
 
-import spdlog  # type: ignore
+import packages.spdlog as spdlog
 
 print()
 
@@ -137,13 +137,13 @@ class LoggerUtil:
                 return
 
             if isinstance(name_or_logger, str):
-                self._init(name_or_logger, sinks)
+                self.NewLogger(name_or_logger, sinks)
                 return
 
             print(f"警告:日志记录器(0x{id(self):X})没有活动实例.")
             return
 
-        def _init(self, name: str, sinks: list):
+        def NewLogger(self, name: str, sinks: list):
             self._logger = spdlog.SinkLogger(
                 name,
                 sinks if len(sinks) != 0 else [LoggerUtil.StdoutSink()],
@@ -160,14 +160,14 @@ class LoggerUtil:
             if self._logger:
                 self._log = self._logger.log
                 return
-            self._init("NULL", [])
+            self.NewLogger("NULL", [])
 
         def GetLogger(self):
             return self._logger
 
         def SetLogger(self, obj: spdlog.SinkLogger):
             self._logger = obj
-            self._log = self._logger.log
+            self._log = self._logger.log  # type: ignore
 
         def ObjLogger(self, obj: str | object):
             if not isinstance(obj, str):
@@ -176,11 +176,11 @@ class LoggerUtil:
                 name = obj
 
             if self._logger:
-                get = LoggerUtil.Logger(self._logger.name(), self._logger.sinks())
-                get._prefix = "<" + name + "> "
-                return get
+                logger = LoggerUtil.Logger(self._logger.name(), self._logger.sinks())
+                logger._prefix = "<" + name + "> "
+                return logger
 
-            return LoggerUtil.Logger("", None)
+            raise ValueError("No logger instance exists.")
 
         def _null(self, level: "LoggerUtil.LEVEL", msg: str):
             pass
@@ -229,15 +229,15 @@ _sinks = [
 
 logger = LoggerUtil.Logger("default", _sinks)
 
+
 def main():
-
-
     logger.track("~!@#$%^&*()_+|`1234567890-=|qwer|QWER|[];',./|{{}}:\"<>?")
     logger.debug("~!@#$%^&*()_+|`1234567890-=|qwer|QWER|[];',./|{{}}:\"<>?")
     logger.info("~!@#$%^&*()_+|`1234567890-=|qwer|QWER|[];',./|{{}}:\"<>?")
     logger.warn("~!@#$%^&*()_+|`1234567890-=|qwer|QWER|[];',./|{{}}:\"<>?")
     logger.error("~!@#$%^&*()_+|`1234567890-=|qwer|QWER|[];',./|{{}}:\"<>?")
     logger.fatal("~!@#$%^&*()_+|`1234567890-=|qwer|QWER|[];',./|{{}}:\"<>?")
+
 
 if __name__ == "__main__":
     main()

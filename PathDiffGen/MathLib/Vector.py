@@ -61,7 +61,7 @@ class Vec2D:
             return Vec2D(self.x, self.y)
         return self.GetStart() + self
 
-    def Set(self, x: Num = None, y: Num = None):
+    def Set(self, x: Num, y: Num):
         """设置 向量值"""
         self.x = x
         self.y = y
@@ -396,6 +396,26 @@ class Vec2D:
         x2, y2 = u.GetEnd().GetTuple()
         x3, y3 = v.GetStart().GetTuple()
         x4, y4 = v.GetEnd().GetTuple()
+
+        # 共点检查
+        is_us_vs = x1 == x3 and y1 == y3
+        is_us_ve = x1 == x4 and y1 == y4
+        is_ue_ve = x2 == x4 and y2 == y4
+        is_ue_vs = x2 == x3 and y2 == y3
+
+        # 正向同线(+) u ·---->· v
+        # 反向同线(-) u ·<--->· v
+        if (is_us_vs and is_ue_ve) or (is_us_ve and is_ue_vs):
+            raise Exception("未定义行为:对两个等长重叠的向量求交点")
+        # 共U起点(-) u <----·----> v
+        # 共U起点(+) u <----·<---- v
+        elif is_us_vs or is_us_ve:
+            return Vec2D(x1, y1)
+        # 共U终点(-) u ---->·<---- v
+        # 共U终点(+) u ---->·----> v
+        elif is_ue_ve or is_ue_vs:
+            return Vec2D(x2, y2)
+
         x_up = (x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)
         x_dn = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
         if x_dn == 0:
