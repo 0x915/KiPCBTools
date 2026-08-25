@@ -48,7 +48,7 @@
             "version": "0.10.0",
             "status": "development",
             "kicad_version": "10.0",
-            "download_url": "https://github.com/0x915/KiPCBTools/releases/download/dev/KiPCBTools-0x915-v0.10.0.zip",
+            "download_url": "https://github.com/0x915/KiPCBTools/releases/download/dev-0.10.1/KiPCBTools-0x915-v0.10.0.zip",
             "platforms": [
                 "windows"
             ]
