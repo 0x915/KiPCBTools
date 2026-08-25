@@ -9,21 +9,12 @@
 
 | 当前开发进度 | 工具 |
 |------- | ------- |
-| 发行/重构 | FreeDiffPair使用旧版插件接口开发，入口位于Pcbnew插件按钮，正在重构，未来将提供独立图形界面 |
-| 开发中 | PathDiffGen使用新IPC接口开发，Pcbnew中没有入口，需手动运行脚本，未来将提供独立图形界面  |
+| 停止维护 | FreeDiffPair(旧版插件接口)，入口位于Pcbnew插件按钮，未来将重构到IPC接口 |
+| 开发中 | PathDiffGen(新版IPC接口)，Pcbnew中没有入口，需手动运行脚本，未来将提供图形界面  |
 
 # FreeDiffPair 
 **自由角度差分对生成器  /  Free Angle Differential Pair **
 
-当前存在的BUG：
-> 生成差分对后，会在起点(实际上起终点不区分)产生一个长度为1nm(Kicad数据最小值)的线路，  
-> 该1nm线路不会对PCB性能产生影响，仅作为第一条和第三条线路中非常短的连接段。
-> (该1nm线路 会产生 DRC警告 悬空线路)   
-> 但会对再次使用插件生成差分对时产生影响，1nm的长度单位过小无法参与向量计算，    
-> 某些情况下插件可以使用但会产生错误的结果，但大部分情况插件会直接抛出错误。     
-> 修正的方法为删除1nm线路，然后使用自由角度拖动第一条或第三条线路吸附到另一条上，    
-> 以得到一根连续的单端线，满足插件的输入要求。拖动距离很短不会影响PCB性能。    
- 
 使用方法和要求
 > 输入线路的要求：差分对足够平行、单端线完全连续
 > 
@@ -47,8 +38,17 @@
 | B | <img src="https://github.com/user-attachments/assets/9d40940b-b2c4-40a0-bb3a-05e4a244b43f" width="500px"> |  
 | C | <img src="https://github.com/user-attachments/assets/4112692c-5783-4701-9482-3d8ab21c7b50" height="142px"> <img src="https://github.com/user-attachments/assets/49167115-05db-4ec9-b8ad-3fadbf7d1b13" height="142px"> |
 
-# DiffGen
+# PathDiffGen
 **路径差分对生成器  /  BoardSegment Differential Pair Generator**  
+
+目前运行要求：
+> - 单pcbnew运行
+> - 在控制台cmd/powershell中cd到插件目录PathDiffGen下
+> - 使用python解释器(已安装kicad-python依赖)直接运行main.py   
+> 命令 python main.py   
+> 如果不满足输入要求控制台日志会打印错误信息   
+> 安装依赖 python -m pip install kicad-python   
+
 
 使用方法和要求
 > 输入线路的要求：差分对足够平行、折线(一组图形线段)完全连续
