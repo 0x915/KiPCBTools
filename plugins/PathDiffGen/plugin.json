@@ -1,0 +1,29 @@
+{
+    "$schema": "https://go.kicad.org/api/schemas/v1",
+    "identifier": "com.github.0x915.pcbtools.pathdiffgen",
+    "name": "PathDiffGen",
+    "description": "Generate a differential pair that follows the path of the selected graphic polyline (0x915)",
+    "runtime": {
+        "type": "python",
+        "min_version": "3.9"
+    },
+    "show-button": false,
+    "actions": [
+        {
+            "identifier": "path-diff-gen",
+            "name": "PathDiffGen",
+            "description": "Generate differential pair tracks along the selected graphic polyline",
+            "show-button": true,
+            "scopes": [
+                "pcb"
+            ],
+            "entrypoint": "main.py",
+            "icons-light": [
+                "main.png"
+            ],
+            "icons-dark": [
+                "main.png"
+            ]
+        }
+    ]
+}

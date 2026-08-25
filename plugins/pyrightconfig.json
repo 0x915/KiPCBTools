@@ -1,0 +1,16 @@
+{
+    "extraPaths": [
+        "./site-packages"
+    ],
+    "reportDeprecated": "none",
+    "reportImplicitOverride": "none",
+    "reportIncompatibleMethodOverride": "none",
+    "reportMissingParameterType": "none",
+    "reportPrivateLocalImportUsage": "none",
+    "reportUnannotatedClassAttribute": "none",
+    "reportUnknownArgumentType": "none",
+    "reportUnknownMemberType": "none",
+    "reportUnknownParameterType": "none",
+    "reportUnknownVariableType": "none",
+    "reportUnusedCallResult": "none"
+}

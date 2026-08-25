@@ -1,0 +1,40 @@
+[tool.ruff]
+exclude = [
+    ".bzr", ".direnv", ".eggs", ".git", ".git-rewrite",
+    ".hg", ".mypy_cache", ".nox", ".pants.d", ".pytype",
+    ".ruff_cache", ".svn", ".tox", ".venv", "__pypackages__",
+    "_build", "buck-out", "dist", "node_modules", "venv"
+]
+respect-gitignore = true
+cache-dir = ".ruff_cache"
+preview = true
+line-length = 100
+indent-width = 4
+# target-version = "py312"
+
+
+[tool.ruff.analyze]
+direction = "dependencies"
+
+
+[tool.ruff.lint]
+preview = true
+select = ["E4", "E7", "E9", "F"]
+ignore = ["F405", "F403", "F401", "F541"]
+fixable = ["ALL"]
+unfixable = []
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+explicit-preview-rules = true
+
+
+[tool.ruff.format]
+preview = true
+docstring-code-format = false
+docstring-code-line-length = "dynamic"
+indent-style = "space"
+line-ending = "auto"
+quote-style = "double"
+skip-magic-trailing-comma = false
+
+
+
